@@ -1,18 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-
-/**
- * Resend's REST API, called directly. The `resend` SDK is a thin wrapper over
- * this same endpoint, and skipping it keeps the serverless cold start lean.
- */
-const RESEND_ENDPOINT = 'https://api.resend.com/emails';
-
-/**
- * Resend only accepts `onboarding@resend.dev` as a sender for accounts with no
- * verified domain, and it will ONLY deliver to the address that owns the Resend
- * account. Point MAIL_FROM at a verified domain before real users sign up.
- */
-const DEFAULT_FROM = 'QuestLine <onboarding@resend.dev>';
+import { createTransport, type Transporter } from 'nodemailer';
 
 @Injectable()
 export class MailService {
@@ -20,8 +8,31 @@ export class MailService {
 
   constructor(private readonly config: ConfigService) {}
 
-  private get apiKey(): string | undefined {
-    return this.config.get<string>('RESEND_API_KEY');
+  /**
+   * Built lazily and cached: a serverless invocation that never sends mail
+   * should not pay for an SMTP handshake, and one that sends twice should not
+   * pay twice.
+   */
+  private transporter?: Transporter;
+
+  private getTransporter(): Transporter | undefined {
+    const host = this.config.get<string>('SMTP_HOST');
+    const user = this.config.get<string>('SMTP_USER');
+    const pass = this.config.get<string>('SMTP_PASS');
+    if (!host || !user || !pass) return undefined;
+
+    if (!this.transporter) {
+      const port = Number(this.config.get<string>('SMTP_PORT') ?? 465);
+      this.transporter = createTransport({
+        host,
+        port,
+        // 465 speaks TLS from the first byte; 587 opens in the clear and
+        // upgrades via STARTTLS. Getting this backwards hangs the connection.
+        secure: port === 465,
+        auth: { user, pass },
+      });
+    }
+    return this.transporter;
   }
 
   async sendOtp(to: string, code: string, purpose: 'signup' | 'password_change') {
@@ -37,36 +48,29 @@ export class MailService {
   }
 
   private async send({ to, subject, html }: { to: string; subject: string; html: string }) {
-    const apiKey = this.apiKey;
+    const transporter = this.getTransporter();
 
-    // Without a key, fall back to logging the mail rather than hard-failing:
-    // local development stays usable, and the code is visible in the terminal.
-    if (!apiKey) {
+    // Without SMTP credentials, fall back to logging the mail rather than
+    // hard-failing: local development stays usable, and the code is visible in
+    // the terminal.
+    if (!transporter) {
       this.logger.warn(
-        `RESEND_API_KEY is not set — email not sent. Would have mailed "${subject}" to ${to}`,
+        `SMTP is not configured — email not sent. Would have mailed "${subject}" to ${to}`,
       );
       return;
     }
 
-    const res = await fetch(RESEND_ENDPOINT, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: this.config.get<string>('MAIL_FROM') ?? DEFAULT_FROM,
-        to: [to],
+    try {
+      await transporter.sendMail({
+        from: this.config.get<string>('MAIL_FROM') ?? this.config.get<string>('SMTP_USER'),
+        to,
         subject,
         html,
-      }),
-    });
-
-    if (!res.ok) {
-      const detail = await res.text().catch(() => '');
+      });
+    } catch (err) {
       // Deliberately not surfaced to the caller: a mail outage must not leak
       // provider internals, and signup already tells the user to re-request.
-      this.logger.error(`Resend rejected the email (${res.status}): ${detail}`);
+      this.logger.error(`SMTP rejected the email: ${String(err)}`);
       throw new Error('Failed to send email');
     }
   }
