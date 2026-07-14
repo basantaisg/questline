@@ -211,8 +211,9 @@ export default function Landing() {
           ))}
         </section>
 
-        {/* FEATURES — bento */}
-        <section className="mt-28">
+        {/* FEATURES — bento. The navbar's "About" link targets this section, so
+            it needs scroll margin to clear the fixed header. */}
+        <section id="game-loop" className="mt-28 scroll-mt-28">
           <motion.h2
             variants={fadeUp}
             initial="hidden"

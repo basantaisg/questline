@@ -1,20 +1,39 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Sparkles } from 'lucide-react';
+import { ExternalLink, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 
+interface NavLink {
+  href: string;
+  label: string;
+  /** Opens in a new tab and never renders as the active route. */
+  external?: boolean;
+}
+
+const CREATOR: NavLink = {
+  href: 'https://x.com/basanta_stoic',
+  label: 'Creator',
+  external: true,
+};
+
 /** Dashboard, Feed and Profile all bounce to /login when signed out, so a
  *  visitor is only offered what they can actually open. */
-const publicLinks = [{ href: '/pricing', label: 'Plans' }];
+const publicLinks: NavLink[] = [
+  { href: '/', label: 'Home' },
+  { href: '/#game-loop', label: 'About' },
+  { href: '/pricing', label: 'Plans' },
+  CREATOR,
+];
 
-const authedLinks = [
+const authedLinks: NavLink[] = [
   { href: '/dashboard', label: 'Dashboard' },
   { href: '/feed', label: 'Feed' },
   { href: '/pricing', label: 'Plans' },
   { href: '/profile', label: 'Profile' },
+  CREATOR,
 ];
 
 export default function Navbar() {
@@ -38,19 +57,35 @@ export default function Navbar() {
         </Link>
 
         <div className="hidden items-center gap-1 md:flex">
-          {(me ? authedLinks : publicLinks).map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={`rounded-lg px-4 py-2 font-mono text-xs uppercase tracking-widest transition-colors duration-200 ${
-                pathname === link.href
-                  ? 'bg-neon-cyan/10 text-neon-cyan'
-                  : 'text-ink-muted hover:bg-white/5 hover:text-ink'
-              }`}
-            >
-              {link.label}
-            </Link>
-          ))}
+          {(me ? authedLinks : publicLinks).map((link) => {
+            const active = !link.external && pathname === link.href;
+            const className = `rounded-lg px-4 py-2 font-mono text-xs uppercase tracking-widest transition-colors duration-200 ${
+              active
+                ? 'bg-neon-cyan/10 text-neon-cyan'
+                : 'text-ink-muted hover:bg-white/5 hover:text-ink'
+            }`;
+
+            if (link.external) {
+              return (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`flex items-center gap-1.5 ${className}`}
+                >
+                  {link.label}
+                  <ExternalLink className="h-3 w-3" aria-hidden />
+                </a>
+              );
+            }
+
+            return (
+              <Link key={link.href} href={link.href} className={className}>
+                {link.label}
+              </Link>
+            );
+          })}
         </div>
 
         <div className="flex items-center gap-3">
