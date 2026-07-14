@@ -1,4 +1,15 @@
-import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { Request } from 'express';
 import { CurrentUser } from '../auth/current-user.decorator';
@@ -9,10 +20,12 @@ import { AiService } from './ai.service';
 import { RoadmapDto } from './dto/ai.dto';
 
 @Controller('ai')
-@UseGuards(JwtAuthGuard, AiQuotaGuard)
+@UseGuards(JwtAuthGuard)
 export class AiController {
   constructor(private readonly ai: AiService) {}
 
+  /** Only generation is metered — reading plans you already paid for is not. */
+  @UseGuards(AiQuotaGuard)
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post('roadmap')
   async roadmap(
@@ -29,5 +42,16 @@ export class AiController {
         limit: req.aiQuota.limit,
       },
     };
+  }
+
+  @Get('roadmaps')
+  roadmaps(@CurrentUser() user: JwtPayload) {
+    return this.ai.listRoadmaps(user.sub);
+  }
+
+  @Delete('roadmaps/:id')
+  @HttpCode(204)
+  async remove(@CurrentUser() user: JwtPayload, @Param('id', ParseUUIDPipe) id: string) {
+    await this.ai.deleteRoadmap(user.sub, id);
   }
 }

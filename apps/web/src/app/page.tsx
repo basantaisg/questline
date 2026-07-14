@@ -79,7 +79,7 @@ const features = [
   {
     icon: Timer,
     title: 'Focus timer',
-    body: 'A built-in pomodoro engine tracks real engagement. Finish a focus block, bank the XP.',
+    body: 'Run 25/5, 45/15 or a 90/25 ultradian sprint. Finish a focus block, bank the XP.',
     accent: 'text-neon-amber',
     glow: '',
   },
@@ -101,8 +101,8 @@ const features = [
 
 const tiers = [
   { name: 'Free', price: '$0', ai: 'No AI access', highlight: false },
-  { name: 'Starter', price: '$5', ai: '3 AI prompts / mo', highlight: false },
-  { name: 'Pro', price: '$10', ai: '50 AI prompts / mo', highlight: true },
+  { name: 'Starter', price: '$5', ai: '10 AI prompts / mo', highlight: false },
+  { name: 'Pro', price: '$10', ai: '30 AI prompts / mo', highlight: true },
   { name: 'Elite', price: '$20', ai: 'Unlimited + priority', highlight: false },
 ];
 

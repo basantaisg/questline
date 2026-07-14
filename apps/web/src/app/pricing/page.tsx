@@ -27,8 +27,8 @@ const tiers = [
     icon: Rocket,
     accent: 'text-neon-cyan',
     button: 'border-neon-cyan/60 bg-neon-cyan/10 text-neon-cyan hover:bg-neon-cyan/20',
-    perks: ['Everything in Free', '3 AI prompts / month', 'AI 7-day roadmaps', 'Suggested quests'],
-    ai: '3 AI prompts / mo',
+    perks: ['Everything in Free', '10 AI prompts / month', 'AI 7-day roadmaps', 'Suggested quests'],
+    ai: '10 AI prompts / mo',
   },
   {
     id: 'pro' as const,
@@ -37,8 +37,8 @@ const tiers = [
     icon: Sparkles,
     accent: 'text-neon-lime',
     button: 'border-neon-lime/60 bg-neon-lime/10 text-neon-lime hover:bg-neon-lime/20',
-    perks: ['Everything in Starter', '50 AI prompts / month', 'Daily task checklists', 'Priority support'],
-    ai: '50 AI prompts / mo',
+    perks: ['Everything in Starter', '30 AI prompts / month', 'Daily task checklists', 'Priority support'],
+    ai: '30 AI prompts / mo',
     highlight: true,
   },
   {

@@ -105,3 +105,11 @@ export interface Roadmap {
   days: { day: number; theme: string; tasks: string[] }[];
   suggestedHabits: { name: string; frequency: 'daily' | 'weekly'; xpReward: number }[];
 }
+
+/** A roadmap as persisted — survives a refresh, unlike the generated response. */
+export interface SavedRoadmap {
+  id: string;
+  goal: string;
+  createdAt: string;
+  plan: Roadmap;
+}

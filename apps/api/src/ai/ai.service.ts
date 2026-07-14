@@ -1,19 +1,18 @@
 import {
   Inject,
   Injectable,
+  NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { GoogleGenAI } from '@google/genai';
+import { and, desc, eq } from 'drizzle-orm';
+import { RoadmapPlan } from '../common/roadmap';
 import { Db, DB } from '../db/db.module';
-import { aiUsageLogs } from '../db/schema';
+import { aiUsageLogs, roadmaps } from '../db/schema';
 
-export interface Roadmap {
-  title: string;
-  summary: string;
-  days: { day: number; theme: string; tasks: string[] }[];
-  suggestedHabits: { name: string; frequency: 'daily' | 'weekly'; xpReward: number }[];
-}
+/** How many past roadmaps a user can page through in the planner. */
+const HISTORY_LIMIT = 20;
 
 @Injectable()
 export class AiService {
@@ -35,7 +34,7 @@ export class AiService {
    * Parses the user's goal into a personalized 7-day roadmap with daily
    * checklists. Elite tier requests are flagged for priority execution.
    */
-  async generateRoadmap(userId: string, goal: string, tier: string): Promise<Roadmap> {
+  async generateRoadmap(userId: string, goal: string, tier: string) {
     if (!this.client) {
       throw new ServiceUnavailableException(
         'AI engine is not configured yet (missing GEMINI_API_KEY).',
@@ -71,9 +70,9 @@ Tasks must be small, concrete and checkable. Keep every string under 120 charact
     });
 
     const text = response.text ?? '';
-    let roadmap: Roadmap;
+    let plan: RoadmapPlan;
     try {
-      roadmap = JSON.parse(text) as Roadmap;
+      plan = JSON.parse(text) as RoadmapPlan;
     } catch {
       throw new ServiceUnavailableException('AI returned an unreadable plan — try again.');
     }
@@ -86,6 +85,39 @@ Tasks must be small, concrete and checkable. Keep every string under 120 charact
       promptChars: goal.length,
     });
 
-    return roadmap;
+    const [saved] = await this.db
+      .insert(roadmaps)
+      .values({ userId, goal, plan })
+      .returning();
+
+    return {
+      id: saved.id,
+      goal: saved.goal,
+      createdAt: saved.createdAt,
+      plan: saved.plan,
+    };
+  }
+
+  /** Newest first, so the planner can restore the last plan on load. */
+  async listRoadmaps(userId: string) {
+    return this.db
+      .select({
+        id: roadmaps.id,
+        goal: roadmaps.goal,
+        createdAt: roadmaps.createdAt,
+        plan: roadmaps.plan,
+      })
+      .from(roadmaps)
+      .where(eq(roadmaps.userId, userId))
+      .orderBy(desc(roadmaps.createdAt))
+      .limit(HISTORY_LIMIT);
+  }
+
+  async deleteRoadmap(userId: string, id: string) {
+    const [deleted] = await this.db
+      .delete(roadmaps)
+      .where(and(eq(roadmaps.id, id), eq(roadmaps.userId, userId)))
+      .returning({ id: roadmaps.id });
+    if (!deleted) throw new NotFoundException('Roadmap not found');
   }
 }

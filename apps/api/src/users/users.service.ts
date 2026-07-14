@@ -7,8 +7,8 @@ import { aiUsageLogs, habitCompletions, streaks, subscriptions, users } from '..
 
 export const TIER_AI_LIMITS: Record<string, number> = {
   free: 0,
-  starter: 3,
-  pro: 50,
+  starter: 10,
+  pro: 30,
   elite: Number.POSITIVE_INFINITY,
 };
 

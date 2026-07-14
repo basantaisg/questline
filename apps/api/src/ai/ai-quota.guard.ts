@@ -15,7 +15,7 @@ import { TIER_AI_LIMITS } from '../users/users.service';
 
 /**
  * Enforces per-tier monthly AI quotas *before* the controller runs:
- *   free → 0 prompts, starter → 3/mo, pro → 50/mo, elite → unlimited.
+ *   free → 0 prompts, starter → 10/mo, pro → 30/mo, elite → unlimited.
  * Attaches { tier, used, limit } to the request for the controller.
  */
 @Injectable()

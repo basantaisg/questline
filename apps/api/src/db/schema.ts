@@ -3,6 +3,7 @@ import {
   date,
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   text,
@@ -11,6 +12,7 @@ import {
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core';
+import { RoadmapPlan } from '../common/roadmap';
 
 export const tierEnum = pgEnum('tier', ['free', 'starter', 'pro', 'elite']);
 export const roleEnum = pgEnum('role', ['user', 'admin']);
@@ -179,6 +181,24 @@ export const aiUsageLogs = pgTable(
     createdAt: timestamp('created_at').notNull().defaultNow(),
   },
   (t) => [index('ai_usage_user_idx').on(t.userId, t.createdAt)],
+);
+
+/**
+ * Every generated roadmap is kept: a generation burns a metered AI prompt, so
+ * losing it on refresh would cost the user something they paid for.
+ */
+export const roadmaps = pgTable(
+  'roadmaps',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    goal: varchar('goal', { length: 500 }).notNull(),
+    plan: jsonb('plan').$type<RoadmapPlan>().notNull(),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+  },
+  (t) => [index('roadmaps_user_idx').on(t.userId, t.createdAt)],
 );
 
 export const refreshTokens = pgTable(

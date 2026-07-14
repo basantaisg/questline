@@ -2,11 +2,24 @@
 
 import { motion } from 'framer-motion';
 import { Pause, Play, RotateCcw } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Habit } from '@/lib/types';
 
-const FOCUS_MIN = 25;
-const BREAK_MIN = 5;
+interface Preset {
+  id: string;
+  label: string;
+  focus: number;
+  break: number;
+  blurb: string;
+}
+
+const PRESETS: Preset[] = [
+  { id: '25-5', label: '25 / 5', focus: 25, break: 5, blurb: 'classic pomodoro' },
+  { id: '45-15', label: '45 / 15', focus: 45, break: 15, blurb: 'deep session' },
+  { id: '90-25', label: '90 / 25', focus: 90, break: 25, blurb: 'ultradian sprint' },
+];
+
+const STORAGE_KEY = 'questline:focus-preset';
 
 export default function FocusTimer({
   habits,
@@ -15,12 +28,22 @@ export default function FocusTimer({
   habits: Habit[];
   onSessionComplete: (habitId: string | null) => void;
 }) {
+  const [preset, setPreset] = useState<Preset>(PRESETS[0]);
   const [mode, setMode] = useState<'focus' | 'break'>('focus');
-  const [secondsLeft, setSecondsLeft] = useState(FOCUS_MIN * 60);
+  const [secondsLeft, setSecondsLeft] = useState(PRESETS[0].focus * 60);
   const [running, setRunning] = useState(false);
   const [habitId, setHabitId] = useState<string>('');
-  const total = (mode === 'focus' ? FOCUS_MIN : BREAK_MIN) * 60;
+  const total = (mode === 'focus' ? preset.focus : preset.break) * 60;
   const firedRef = useRef(false);
+
+  // The chosen rhythm is a preference, so it survives reloads.
+  useEffect(() => {
+    const stored = PRESETS.find((p) => p.id === localStorage.getItem(STORAGE_KEY));
+    if (stored) {
+      setPreset(stored);
+      setSecondsLeft(stored.focus * 60);
+    }
+  }, []);
 
   useEffect(() => {
     if (!running) return;
@@ -37,17 +60,35 @@ export default function FocusTimer({
     if (mode === 'focus') {
       onSessionComplete(habitId || null);
       setMode('break');
-      setSecondsLeft(BREAK_MIN * 60);
+      setSecondsLeft(preset.break * 60);
     } else {
       setMode('focus');
-      setSecondsLeft(FOCUS_MIN * 60);
+      setSecondsLeft(preset.focus * 60);
     }
     firedRef.current = false;
-  }, [secondsLeft, running, mode, habitId, onSessionComplete]);
+  }, [secondsLeft, running, mode, habitId, preset, onSessionComplete]);
+
+  /** Any rhythm or mode change resets the clock — a half-run block can't carry over. */
+  const applyPreset = (next: Preset) => {
+    setPreset(next);
+    localStorage.setItem(STORAGE_KEY, next.id);
+    setRunning(false);
+    setMode('focus');
+    setSecondsLeft(next.focus * 60);
+  };
+
+  const switchMode = useCallback(
+    (next: 'focus' | 'break') => {
+      setMode(next);
+      setRunning(false);
+      setSecondsLeft((next === 'focus' ? preset.focus : preset.break) * 60);
+    },
+    [preset],
+  );
 
   const reset = () => {
     setRunning(false);
-    setSecondsLeft((mode === 'focus' ? FOCUS_MIN : BREAK_MIN) * 60);
+    setSecondsLeft(total);
   };
 
   const mm = String(Math.floor(secondsLeft / 60)).padStart(2, '0');
@@ -64,11 +105,7 @@ export default function FocusTimer({
           {(['focus', 'break'] as const).map((m) => (
             <button
               key={m}
-              onClick={() => {
-                setMode(m);
-                setRunning(false);
-                setSecondsLeft((m === 'focus' ? FOCUS_MIN : BREAK_MIN) * 60);
-              }}
+              onClick={() => switchMode(m)}
               className={`cursor-pointer rounded-md px-2.5 py-1 tracking-widest transition-colors duration-200 ${
                 mode === m ? 'bg-neon-cyan/15 text-neon-cyan' : 'text-ink-faint hover:text-ink'
               }`}
@@ -77,6 +114,31 @@ export default function FocusTimer({
             </button>
           ))}
         </div>
+      </div>
+
+      <div
+        className="mt-4 grid grid-cols-3 gap-1.5"
+        role="group"
+        aria-label="Focus rhythm"
+      >
+        {PRESETS.map((p) => (
+          <button
+            key={p.id}
+            onClick={() => applyPreset(p)}
+            aria-pressed={preset.id === p.id}
+            title={`${p.focus} min focus / ${p.break} min break — ${p.blurb}`}
+            className={`cursor-pointer rounded-xl border px-2 py-2 transition-colors duration-200 ${
+              preset.id === p.id
+                ? 'border-neon-cyan/60 bg-neon-cyan/10 text-neon-cyan'
+                : 'border-white/10 text-ink-muted hover:border-white/30 hover:text-ink'
+            }`}
+          >
+            <div className="font-mono text-xs tabular-nums">{p.label}</div>
+            <div className="mt-0.5 font-mono text-[9px] uppercase tracking-widest text-ink-faint">
+              {p.blurb}
+            </div>
+          </button>
+        ))}
       </div>
 
       <div className="relative mx-auto mt-5 h-52 w-52">
