@@ -1,0 +1,103 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  background-color: #06030e;
+  overflow-x: hidden;
+}
+
+/* --- Atmosphere layers --- */
+.bg-grid {
+  background-image:
+    linear-gradient(rgba(56, 225, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(56, 225, 255, 0.045) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(ellipse 90% 70% at 50% 0%, black 30%, transparent 75%);
+}
+
+.bg-orbs {
+  background:
+    radial-gradient(600px circle at 15% 10%, rgba(56, 225, 255, 0.09), transparent 55%),
+    radial-gradient(700px circle at 85% 25%, rgba(255, 78, 205, 0.08), transparent 55%),
+    radial-gradient(800px circle at 50% 95%, rgba(168, 255, 62, 0.05), transparent 60%);
+}
+
+/* --- Glass surfaces --- */
+.glass {
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02));
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+}
+
+.glass-hover {
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+.glass-hover:hover {
+  border-color: rgba(56, 225, 255, 0.35);
+  box-shadow: 0 8px 40px rgba(56, 225, 255, 0.12);
+}
+
+/* --- Neon text --- */
+.neon-cyan-text {
+  color: #38e1ff;
+  text-shadow: 0 0 18px rgba(56, 225, 255, 0.55);
+}
+
+.neon-magenta-text {
+  color: #ff4ecd;
+  text-shadow: 0 0 18px rgba(255, 78, 205, 0.55);
+}
+
+.neon-lime-text {
+  color: #a8ff3e;
+  text-shadow: 0 0 18px rgba(168, 255, 62, 0.55);
+}
+
+/* --- Scrollbar --- */
+::-webkit-scrollbar {
+  width: 10px;
+}
+::-webkit-scrollbar-track {
+  background: #0b0618;
+}
+::-webkit-scrollbar-thumb {
+  background: #1b1036;
+  border-radius: 8px;
+  border: 2px solid #0b0618;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #2a1b52;
+}
+
+::selection {
+  background: rgba(56, 225, 255, 0.35);
+}
+
+/* --- Focus visibility (a11y) --- */
+:focus-visible {
+  outline: 2px solid #38e1ff;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
