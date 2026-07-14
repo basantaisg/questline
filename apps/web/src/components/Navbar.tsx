@@ -12,6 +12,8 @@ const links = [
   { href: '/pricing', label: 'Plans' },
 ];
 
+const authedLinks = [...links, { href: '/profile', label: 'Profile' }];
+
 export default function Navbar() {
   const { me, logout } = useAuth();
   const pathname = usePathname();
@@ -33,7 +35,7 @@ export default function Navbar() {
         </Link>
 
         <div className="hidden items-center gap-1 md:flex">
-          {links.map((link) => (
+          {(me ? authedLinks : links).map((link) => (
             <Link
               key={link.href}
               href={link.href}

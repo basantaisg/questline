@@ -13,19 +13,41 @@ import {
 } from 'drizzle-orm/pg-core';
 
 export const tierEnum = pgEnum('tier', ['free', 'starter', 'pro', 'elite']);
+export const roleEnum = pgEnum('role', ['user', 'admin']);
 export const paymentStatusEnum = pgEnum('payment_status', ['pending', 'confirmed', 'expired']);
 export const cryptoCurrencyEnum = pgEnum('crypto_currency', ['btc', 'eth', 'sol', 'usdt']);
 export const frequencyEnum = pgEnum('frequency', ['daily', 'weekly']);
 export const postTypeEnum = pgEnum('post_type', ['quote', 'milestone']);
 export const reactionEnum = pgEnum('reaction_type', ['salute', 'fire', 'keep_going']);
+export const otpPurposeEnum = pgEnum('otp_purpose', ['signup', 'password_change']);
 
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
   email: varchar('email', { length: 255 }).notNull().unique(),
   username: varchar('username', { length: 32 }).notNull().unique(),
   passwordHash: text('password_hash').notNull(),
+  role: roleEnum('role').notNull().default('user'),
   xp: integer('xp').notNull().default(0),
   level: integer('level').notNull().default(1),
+
+  // --- Profile ---
+  name: varchar('name', { length: 80 }),
+  imageUrl: text('image_url'),
+  age: integer('age'),
+  profession: varchar('profession', { length: 80 }),
+  /** Null until the first username change; drives the 14-day cooldown. */
+  lastUsernameChangedAt: timestamp('last_username_changed_at'),
+
+  // --- Email verification / OTP ---
+  isVerified: boolean('is_verified').notNull().default(false),
+  /** SHA-256 of the 6-digit code, never the code itself. */
+  otpCode: text('otp_code'),
+  otpExpiresAt: timestamp('otp_expires_at'),
+  /** What the pending code authorizes — a signup code cannot change a password. */
+  otpPurpose: otpPurposeEnum('otp_purpose'),
+  /** Wrong guesses against the pending code; caps online brute force. */
+  otpAttempts: integer('otp_attempts').notNull().default(0),
+
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 

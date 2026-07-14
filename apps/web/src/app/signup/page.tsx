@@ -26,8 +26,10 @@ export default function SignupPage() {
     setError(null);
     setBusy(true);
     try {
-      await signup(email, username, password);
-      router.push('/dashboard');
+      // No session comes back — the account stays inert until the emailed code
+      // is confirmed on /verify.
+      const pending = await signup(email, username, password);
+      router.push(`/verify?email=${encodeURIComponent(pending.email)}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Signup failed');
       setBusy(false);
@@ -53,7 +55,8 @@ export default function SignupPage() {
             Create your <span className="neon-magenta-text">character</span>
           </h1>
           <p className="mt-2 text-sm text-ink-muted">
-            Level 1. Zero XP. Infinite potential.
+            Level 1. Zero XP. Infinite potential. We&apos;ll email you a code to confirm
+            your address.
           </p>
 
           <label className={label} htmlFor="email">Email</label>

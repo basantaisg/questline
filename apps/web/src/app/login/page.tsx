@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FormEvent, useEffect, useState } from 'react';
 import Navbar from '@/components/Navbar';
+import { ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 
 export default function LoginPage() {
@@ -28,6 +29,12 @@ export default function LoginPage() {
       await signin(email, password);
       router.push('/dashboard');
     } catch (err) {
+      // Right password, unconfirmed mailbox: the API has already mailed a fresh
+      // code, so drop the user straight onto the verify screen.
+      if (err instanceof ApiError && err.code === 'EMAIL_NOT_VERIFIED') {
+        router.push(`/verify?email=${encodeURIComponent(err.email ?? email)}`);
+        return;
+      }
       setError(err instanceof Error ? err.message : 'Sign-in failed');
       setBusy(false);
     }

@@ -12,7 +12,7 @@ import { Request, Response } from 'express';
 import { JwtPayload } from '../common/jwt-payload';
 import { AuthResult, AuthService } from './auth.service';
 import { CurrentUser } from './current-user.decorator';
-import { SigninDto, SignupDto } from './dto/auth.dto';
+import { ResendOtpDto, SigninDto, SignupDto, VerifyOtpDto } from './dto/auth.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 
 const REFRESH_COOKIE = 'ql_refresh';
@@ -49,10 +49,28 @@ export class AuthController {
   }
 
   // Brute-force protection: tight limits on credential endpoints.
+  /** Returns no session — the account is unverified until /auth/verify-otp. */
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @Post('signup')
-  async signup(@Body() dto: SignupDto, @Res({ passthrough: true }) res: Response) {
-    return this.send(res, await this.auth.signup(dto));
+  async signup(@Body() dto: SignupDto) {
+    return this.auth.signup(dto);
+  }
+
+  /** Proves ownership of the mailbox, then signs the user in. Rate limited
+   *  hard: a 6-digit code is only a million guesses. */
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Post('verify-otp')
+  @HttpCode(200)
+  async verifyOtp(@Body() dto: VerifyOtpDto, @Res({ passthrough: true }) res: Response) {
+    return this.send(res, await this.auth.verifyOtp(dto));
+  }
+
+  /** Deliberately stingy: each call sends real email to a third party. */
+  @Throttle({ default: { limit: 3, ttl: 60_000 } })
+  @Post('resend-otp')
+  @HttpCode(200)
+  async resendOtp(@Body() dto: ResendOtpDto) {
+    return this.auth.resendOtp(dto);
   }
 
   @Throttle({ default: { limit: 10, ttl: 60_000 } })

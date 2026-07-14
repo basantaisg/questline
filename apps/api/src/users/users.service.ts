@@ -22,8 +22,15 @@ export class UsersService {
         id: users.id,
         email: users.email,
         username: users.username,
+        name: users.name,
+        imageUrl: users.imageUrl,
+        age: users.age,
+        profession: users.profession,
+        role: users.role,
         xp: users.xp,
         level: users.level,
+        isVerified: users.isVerified,
+        lastUsernameChangedAt: users.lastUsernameChangedAt,
         createdAt: users.createdAt,
       })
       .from(users)
@@ -59,7 +66,9 @@ export class UsersService {
         ),
       );
 
-    const limit = TIER_AI_LIMITS[tier];
+    // Admins are ungated: report unlimited AI regardless of the tier they hold,
+    // matching what AiQuotaGuard actually enforces.
+    const limit = user.role === 'admin' ? Number.POSITIVE_INFINITY : TIER_AI_LIMITS[tier];
     return {
       ...user,
       tier,

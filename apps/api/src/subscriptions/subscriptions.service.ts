@@ -1,5 +1,6 @@
 import { ForbiddenException, Inject, Injectable } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
+import { isAdmin } from '../common/is-admin';
 import { Db, DB } from '../db/db.module';
 import { subscriptions } from '../db/schema';
 
@@ -23,6 +24,10 @@ export class SubscriptionsService {
    * checkout creation, and payment confirmation.
    */
   async assertTierChangeAllowed(userId: string, newTier: Tier): Promise<void> {
+    // Admins pay nothing, so no paid period can be owed to them: they may move
+    // to any tier at will to exercise every plan's features.
+    if (await isAdmin(this.db, userId)) return;
+
     const [sub] = await this.db
       .select({ tier: subscriptions.tier, renewsAt: subscriptions.renewsAt })
       .from(subscriptions)

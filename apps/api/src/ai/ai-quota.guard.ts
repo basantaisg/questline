@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { and, count, eq, gte } from 'drizzle-orm';
 import { startOfMonthUtc } from '../common/dates';
+import { isAdmin } from '../common/is-admin';
 import { JwtPayload } from '../common/jwt-payload';
 import { Db, DB } from '../db/db.module';
 import { aiUsageLogs, subscriptions } from '../db/schema';
@@ -25,6 +26,12 @@ export class AiQuotaGuard implements CanActivate {
     const req = context.switchToHttp().getRequest();
     const user: JwtPayload | undefined = req.user;
     if (!user) throw new ForbiddenException('Not authenticated');
+
+    // Admins are not billed and are never quota-limited: skip the tier checks.
+    if (await isAdmin(this.db, user.sub)) {
+      req.aiQuota = { tier: 'elite', used: 0, limit: null };
+      return true;
+    }
 
     const [sub] = await this.db
       .select({ tier: subscriptions.tier })

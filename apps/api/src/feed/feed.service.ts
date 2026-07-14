@@ -1,5 +1,6 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { and, desc, eq, inArray } from 'drizzle-orm';
+import { isAdmin } from '../common/is-admin';
 import { Db, DB } from '../db/db.module';
 import { postReactions, posts, users } from '../db/schema';
 import { CreatePostDto, ReactDto } from './dto/feed.dto';
@@ -32,12 +33,16 @@ export class FeedService {
       .from(postReactions)
       .where(inArray(postReactions.postId, ids));
 
+    const admin = await isAdmin(this.db, userId);
+
     return rows.map((post) => {
       const forPost = reactions.filter((r) => r.postId === post.id);
       const countFor = (t: string) => forPost.filter((r) => r.type === t).length;
       return {
         ...post,
         mine: post.authorId === userId,
+        // Admins moderate: they may remove anyone's post, not just their own.
+        canDelete: post.authorId === userId || admin,
         reactions: {
           salute: countFor('salute'),
           fire: countFor('fire'),
@@ -86,13 +91,18 @@ export class FeedService {
   }
 
   async remove(postId: string, userId: string) {
-    // Users can only delete their own posts.
     const [post] = await this.db
-      .select({ id: posts.id })
+      .select({ id: posts.id, userId: posts.userId })
       .from(posts)
-      .where(and(eq(posts.id, postId), eq(posts.userId, userId)))
+      .where(eq(posts.id, postId))
       .limit(1);
     if (!post) throw new NotFoundException('Post not found');
+
+    // Users can only delete their own posts; admins can moderate any post.
+    if (post.userId !== userId && !(await isAdmin(this.db, userId))) {
+      throw new NotFoundException('Post not found');
+    }
+
     await this.db.delete(posts).where(eq(posts.id, postId));
     return { ok: true };
   }

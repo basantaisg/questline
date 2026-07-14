@@ -8,7 +8,9 @@
     "start": "node dist/src/main.js",
     "typecheck": "tsc --noEmit",
     "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "db:reset": "node scripts/reset-and-seed-admin.mjs",
+    "db:backfill-verified": "node scripts/backfill-verified.mjs"
   },
   "dependencies": {
     "@google/genai": "^1.4.0",

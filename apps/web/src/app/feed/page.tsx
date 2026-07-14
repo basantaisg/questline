@@ -182,10 +182,10 @@ export default function FeedPage() {
                       </div>
                     </div>
                   </div>
-                  {p.mine && (
+                  {p.canDelete && (
                     <button
                       onClick={() => remove(p.id)}
-                      aria-label="Delete post"
+                      aria-label={p.mine ? 'Delete post' : 'Remove post (admin)'}
                       className="cursor-pointer rounded-lg p-2 text-ink-faint transition-colors duration-200 hover:bg-white/5 hover:text-neon-magenta"
                     >
                       <Trash2 className="h-4 w-4" aria-hidden />

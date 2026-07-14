@@ -1,17 +1,46 @@
+export type Role = 'user' | 'admin';
+
 export interface User {
   id: string;
   email: string;
   username: string;
   xp: number;
   level: number;
+  role: Role;
 }
 
-export interface Me extends User {
+/** The editable profile fields, as stored — any of them may be unset. */
+export interface ProfileFields {
+  name: string | null;
+  imageUrl: string | null;
+  age: number | null;
+  profession: string | null;
+}
+
+export interface Profile extends User, ProfileFields {
+  isVerified: boolean;
+  lastUsernameChangedAt: string | null;
+  /** Whole days until the username may change again; 0 means "right now". */
+  usernameChangeableIn: number;
+  createdAt: string;
+}
+
+export interface Me extends User, ProfileFields {
+  isVerified: boolean;
+  lastUsernameChangedAt: string | null;
+  createdAt: string;
   tier: 'free' | 'starter' | 'pro' | 'elite';
   renewsAt: string | null;
   progress: { level: number; xpIntoLevel: number; xpForNextLevel: number };
   stats: { totalCompletions: number; bestStreak: number };
   ai: { used: number; limit: number | null };
+}
+
+/** Signup no longer returns a session — the account is inert until verified. */
+export interface PendingVerification {
+  status: 'verification_required';
+  email: string;
+  message: string;
 }
 
 export interface Habit {
@@ -52,6 +81,8 @@ export interface Post {
   author: string;
   authorLevel: number;
   mine: boolean;
+  /** True for your own posts, and for every post when you are an admin. */
+  canDelete: boolean;
   reactions: Record<ReactionType, number>;
   myReactions: ReactionType[];
 }

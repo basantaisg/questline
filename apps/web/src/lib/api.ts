@@ -11,6 +11,11 @@ export class ApiError extends Error {
   constructor(
     public status: number,
     message: string,
+    /** Machine-readable tag, e.g. EMAIL_NOT_VERIFIED — lets callers branch on
+     *  the failure without string-matching the human message. */
+    public code?: string,
+    /** Set alongside EMAIL_NOT_VERIFIED, so we know whose inbox to point at. */
+    public email?: string,
   ) {
     super(message);
   }
@@ -33,7 +38,7 @@ async function rawRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
     const message = Array.isArray(body?.message)
       ? body.message[0]
       : (body?.message ?? `Request failed (${res.status})`);
-    throw new ApiError(res.status, message);
+    throw new ApiError(res.status, message, body?.code, body?.email);
   }
   return body as T;
 }

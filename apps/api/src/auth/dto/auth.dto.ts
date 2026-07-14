@@ -35,3 +35,20 @@ export class SigninDto {
   @MaxLength(128)
   password: string;
 }
+
+/** A 6-digit numeric code, matched exactly — no whitespace, no letters. */
+export class VerifyOtpDto {
+  @IsEmail()
+  @MaxLength(255)
+  email: string;
+
+  @IsString()
+  @Matches(/^\d{6}$/, { message: 'code must be 6 digits' })
+  code: string;
+}
+
+export class ResendOtpDto {
+  @IsEmail()
+  @MaxLength(255)
+  email: string;
+}

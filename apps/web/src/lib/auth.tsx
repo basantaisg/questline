@@ -9,13 +9,22 @@ import {
   useState,
 } from 'react';
 import { api, post, setAccessToken, tryRefresh } from './api';
-import { Me, User } from './types';
+import { Me, PendingVerification, User } from './types';
 
 interface AuthContextValue {
   me: Me | null;
   loading: boolean;
-  signup: (email: string, username: string, password: string) => Promise<void>;
+  /** Creates the account and mails a code. Returns no session — the caller
+   *  must send the user to /verify. */
+  signup: (
+    email: string,
+    username: string,
+    password: string,
+  ) => Promise<PendingVerification>;
   signin: (email: string, password: string) => Promise<void>;
+  /** Confirms the emailed code and signs the user in. */
+  verifyOtp: (email: string, code: string) => Promise<void>;
+  resendOtp: (email: string) => Promise<{ message: string }>;
   logout: () => Promise<void>;
   refreshMe: () => Promise<void>;
 }
@@ -59,16 +68,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const signup = useCallback(
-    async (email: string, username: string, password: string) => {
-      const result = await post<{ user: User; accessToken: string }>('/auth/signup', {
+    (email: string, username: string, password: string) =>
+      post<PendingVerification>('/auth/signup', { email, username, password }),
+    [],
+  );
+
+  const verifyOtp = useCallback(
+    async (email: string, code: string) => {
+      const result = await post<{ user: User; accessToken: string }>('/auth/verify-otp', {
         email,
-        username,
-        password,
+        code,
       });
       setAccessToken(result.accessToken);
       await refreshMe();
     },
     [refreshMe],
+  );
+
+  const resendOtp = useCallback(
+    (email: string) => post<{ message: string }>('/auth/resend-otp', { email }),
+    [],
   );
 
   const logout = useCallback(async () => {
@@ -81,7 +100,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ me, loading, signup, signin, logout, refreshMe }}>
+    <AuthContext.Provider
+      value={{ me, loading, signup, signin, verifyOtp, resendOtp, logout, refreshMe }}
+    >
       {children}
     </AuthContext.Provider>
   );

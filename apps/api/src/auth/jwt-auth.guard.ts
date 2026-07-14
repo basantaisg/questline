@@ -1,6 +1,7 @@
 import {
   CanActivate,
   ExecutionContext,
+  ForbiddenException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -22,15 +23,24 @@ export class JwtAuthGuard implements CanActivate {
     const token = header?.startsWith('Bearer ') ? header.slice(7) : undefined;
     if (!token) throw new UnauthorizedException('Missing access token');
 
+    let payload: JwtPayload;
     try {
-      const payload = await this.jwt.verifyAsync<JwtPayload>(token, {
+      payload = await this.jwt.verifyAsync<JwtPayload>(token, {
         secret: this.config.getOrThrow<string>('JWT_ACCESS_SECRET'),
         algorithms: ['HS256'],
       });
-      (req as Request & { user: JwtPayload }).user = payload;
-      return true;
     } catch {
       throw new UnauthorizedException('Invalid or expired access token');
     }
+
+    // Unverified accounts get no feature access anywhere in the app. In
+    // practice no such token exists — signup issues none and signin refuses to
+    // mint one — so this is the backstop, not the primary gate.
+    if (payload.verified === false) {
+      throw new ForbiddenException('Verify your email address to continue');
+    }
+
+    (req as Request & { user: JwtPayload }).user = payload;
+    return true;
   }
 }
