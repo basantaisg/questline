@@ -21,14 +21,28 @@ const REFRESH_COOKIE = 'ql_refresh';
 export class AuthController {
   constructor(private readonly auth: AuthService) {}
 
+  /** When the web app and the API sit on different registrable domains — as
+   *  they do on *.vercel.app, which is a public suffix, so foo.vercel.app and
+   *  bar.vercel.app are cross-site — a SameSite=Strict cookie is never sent
+   *  back and refresh silently fails. Set CROSS_SITE_COOKIES=true there.
+   *  On a shared parent domain (app.x.com + api.x.com) leave it unset and keep
+   *  Strict, which is the stronger CSRF posture. */
+  private refreshCookieOptions() {
+    const crossSite = process.env.CROSS_SITE_COOKIES === 'true';
+    return {
+      httpOnly: true,
+      sameSite: crossSite ? ('none' as const) : ('strict' as const),
+      // SameSite=None is only honoured on a Secure cookie.
+      secure: crossSite || process.env.NODE_ENV === 'production',
+      path: '/auth',
+    };
+  }
+
   /** Access token goes to the client (kept in memory); refresh token only ever
-   *  travels as a secure HttpOnly SameSite=Strict cookie scoped to /auth. */
+   *  travels as a secure HttpOnly cookie scoped to /auth. */
   private send(res: Response, result: AuthResult) {
     res.cookie(REFRESH_COOKIE, result.refreshToken, {
-      httpOnly: true,
-      sameSite: 'strict',
-      secure: process.env.NODE_ENV === 'production',
-      path: '/auth',
+      ...this.refreshCookieOptions(),
       maxAge: result.refreshMaxAgeMs,
     });
     return { user: result.user, accessToken: result.accessToken };
@@ -59,7 +73,7 @@ export class AuthController {
   @HttpCode(204)
   async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     await this.auth.logout(req.cookies?.[REFRESH_COOKIE]);
-    res.clearCookie(REFRESH_COOKIE, { path: '/auth' });
+    res.clearCookie(REFRESH_COOKIE, this.refreshCookieOptions());
   }
 
   /** Panic button: signs the user out of every device. */
@@ -71,6 +85,6 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     await this.auth.revokeAllSessions(user.sub);
-    res.clearCookie(REFRESH_COOKIE, { path: '/auth' });
+    res.clearCookie(REFRESH_COOKIE, this.refreshCookieOptions());
   }
 }
